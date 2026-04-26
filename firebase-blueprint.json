@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "Benefit": {
+      "title": "Benefit",
+      "description": "A benefit item that players can choose",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique benefit ID" },
+        "name": { "type": "string", "description": "Display name" },
+        "category": { "type": "string", "description": "Benefit category" },
+        "cost": { "type": "number", "description": "Cost in currency" },
+        "happiness": { "type": "number", "description": "Happiness points" },
+        "size": { "type": "number", "description": "Size in blocks" }
+      },
+      "required": ["id", "name", "category", "cost", "happiness", "size"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A live game event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique event ID" },
+        "name": { "type": "string", "description": "Event name" },
+        "budget": { "type": "number", "description": "Total budget" },
+        "timer": { "type": "number", "description": "Duration in seconds" },
+        "status": { 
+          "type": "string", 
+          "enum": ["waiting", "playing", "finished"],
+          "description": "Current status"
+        },
+        "rules": { "type": "string", "description": "Event instructions" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "budget", "timer", "status", "createdAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A team submission for an event",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string", "description": "Related event ID" },
+        "teamId": { "type": "string", "description": "Team name/identifier" },
+        "packageData": { "type": "array", "description": "Selected benefits" },
+        "totalCost": { "type": "number" },
+        "totalHP": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "teamId", "packageData", "totalCost", "totalHP", "timestamp"]
+    }
+  },
+  "firestore": {
+    "benefits": {
+      "schema": "Benefit",
+      "description": "Global library of benefits"
+    },
+    "events": {
+      "schema": "Event",
+      "description": "Events and sessions"
+    },
+    "events/{eventId}/submissions": {
+      "schema": "Submission",
+      "description": "Submissions for a specific event"
+    }
+  }
+}

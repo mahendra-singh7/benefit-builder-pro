@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() 
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Admin Access: User can read their own admin doc to check permissions
+    match /admins/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false; // Only manual or backend managed usually
+    }
+
+    // Benefit Rules: Read public, Write Admin
+    match /benefits/{benefitId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidBenefit(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Event Rules: Read public, Write Admin
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidEvent(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Submission Rules: Create public, List/Read public (for leaderboard), Update Admin
+    match /events/{eventId}/submissions/{submissionId} {
+      allow read, list: if true;
+      allow create: if isValidSubmission(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    // Validation Functions
+    function isValidBenefit(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'cost', 'happiness', 'size'])
+        && data.id is string
+        && data.name is string && data.name.size() <= 100
+        && data.category is string
+        && data.cost is number && data.cost >= 0
+        && data.happiness is number && data.happiness >= 0
+        && data.size is number && data.size > 0;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'name', 'budget', 'timer', 'status', 'createdAt'])
+        && data.id is string
+        && data.name is string && data.name.size() <= 100
+        && data.budget is number && data.budget > 0
+        && data.timer is number && data.timer > 0
+        && data.status in ['waiting', 'playing', 'finished']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['id', 'eventId', 'teamId', 'packageData', 'totalCost', 'totalHP', 'timestamp'])
+        && data.id is string
+        && data.eventId is string
+        && data.teamId is string && data.teamId.size() <= 100
+        && data.packageData is list
+        && data.totalCost is number
+        && data.totalHP is number
+        && data.timestamp is timestamp;
+    }
+  }
+}
