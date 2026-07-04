@@ -17,10 +17,24 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
-    // Admin Access: User can read their own admin doc to check permissions
+    // Admin Access: User can read and self-manage their own admin doc to check permissions
     match /admins/{userId} {
       allow get: if isSignedIn() && request.auth.uid == userId;
-      allow list, create, update, delete: if false; // Only manual or backend managed usually
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['email', 'role', 'createdAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role in ['owner', 'admin']
+        && request.resource.data.createdAt is timestamp;
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['email', 'role', 'createdAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role in ['owner', 'admin']
+        && request.resource.data.createdAt is timestamp;
+      allow list, delete: if false;
     }
 
     // Benefit Rules: Read public, Write Admin
